@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brain MRI Radiology Report Generator</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0f1117;
+            color: #e1e1e1;
+            min-height: 100vh;
+        }
+
+        header {
+            background: #1a1d27;
+            border-bottom: 1px solid #2d2f3e;
+            padding: 20px 40px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        header h1 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        header span {
+            background: #3b5bdb;
+            color: white;
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #888;
+            font-size: 15px;
+            margin-bottom: 40px;
+        }
+
+        .upload-section {
+            background: #1a1d27;
+            border: 2px dashed #2d2f3e;
+            border-radius: 12px;
+            padding: 50px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        .upload-section:hover {
+            border-color: #3b5bdb;
+        }
+
+        .upload-section.dragover {
+            border-color: #3b5bdb;
+            background: #1e2235;
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .upload-section h2 {
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        .upload-section p {
+            color: #888;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        #fileInput { display: none; }
+
+        .btn-upload {
+            background: #3b5bdb;
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-upload:hover { background: #2f4ac7; }
+
+        .preview-section {
+            display: none;
+            margin-top: 30px;
+            background: #1a1d27;
+            border-radius: 12px;
+            padding: 24px;
+        }
+
+        .preview-section h3 {
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        #imagePreview {
+            width: 100%;
+            max-height: 300px;
+            object-fit: contain;
+            border-radius: 8px;
+            background: #0f1117;
+        }
+
+        .btn-analyze {
+            width: 100%;
+            margin-top: 16px;
+            background: #3b5bdb;
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-analyze:hover { background: #2f4ac7; }
+        .btn-analyze:disabled {
+            background: #2d2f3e;
+            color: #555;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+            color: #888;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #2d2f3e;
+            border-top-color: #3b5bdb;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .result-section {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .detection-card {
+            background: #1a1d27;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .tumor-badge {
+            background: #3b5bdb;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: capitalize;
+            white-space: nowrap;
+        }
+
+        .tumor-badge.notumor {
+            background: #2b8a3e;
+        }
+
+        .detection-info h3 {
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+
+        .detection-info p {
+            color: #888;
+            font-size: 14px;
+        }
+
+        .confidence-bar {
+            height: 6px;
+            background: #2d2f3e;
+            border-radius: 3px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: #3b5bdb;
+            border-radius: 3px;
+            transition: width 0.8s ease;
+        }
+
+        .report-card {
+            background: #1a1d27;
+            border-radius: 12px;
+            padding: 24px;
+        }
+
+        .report-card h3 {
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .report-text {
+            font-size: 14px;
+            line-height: 1.8;
+            color: #c8c8c8;
+            white-space: pre-wrap;
+        }
+
+        .btn-new {
+            width: 100%;
+            margin-top: 20px;
+            background: transparent;
+            color: #3b5bdb;
+            border: 1px solid #3b5bdb;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-new:hover {
+            background: #3b5bdb;
+            color: white;
+        }
+
+        .error-box {
+            display: none;
+            background: #2d1a1a;
+            border: 1px solid #5c2626;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 20px;
+            color: #ff6b6b;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Brain MRI Radiology Report Generator</h1>
+    <span>AI Powered</span>
+</header>
+
+<div class="container">
+    <p class="subtitle">Upload a brain MRI image to automatically generate a structured radiology report</p>
+
+    <!-- Upload Section -->
+    <div class="upload-section" id="uploadSection">
+        <div class="upload-icon">🧠</div>
+        <h2>Drop your MRI image here</h2>
+        <p>Supports JPG and PNG formats</p>
+        <button class="btn-upload" onclick="document.getElementById('fileInput').click()">
+            Choose File
+        </button>
+        <input type="file" id="fileInput" accept=".jpg,.jpeg,.png">
+    </div>
+
+    <!-- Image Preview -->
+    <div class="preview-section" id="previewSection">
+        <h3>Selected Image</h3>
+        <img id="imagePreview" src="" alt="MRI Preview">
+        <button class="btn-analyze" id="analyzeBtn" onclick="analyzeMRI()">
+            Generate Radiology Report
+        </button>
+    </div>
+
+    <!-- Loading -->
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <p>Analyzing MRI and generating report...</p>
+    </div>
+
+    <!-- Error -->
+    <div class="error-box" id="errorBox"></div>
+
+    <!-- Results -->
+    <div class="result-section" id="resultSection">
+        <div class="detection-card">
+            <div class="tumor-badge" id="tumorBadge"></div>
+            <div class="detection-info">
+                <h3>Detection Result</h3>
+                <p id="confidenceText"></p>
+                <div class="confidence-bar">
+                    <div class="confidence-fill" id="confidenceFill"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="report-card">
+            <h3>Radiology Report</h3>
+            <div class="report-text" id="reportText"></div>
+        </div>
+
+        <button class="btn-new" onclick="resetForm()">
+            Analyze Another Image
+        </button>
+    </div>
+</div>
+
+<script>
+    const fileInput = document.getElementById('fileInput');
+    const uploadSection = document.getElementById('uploadSection');
+
+    fileInput.addEventListener('change', function(e) {
+        if (e.target.files[0]) showPreview(e.target.files[0]);
+    });
+
+    uploadSection.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadSection.classList.add('dragover');
+    });
+
+    uploadSection.addEventListener('dragleave', () => {
+        uploadSection.classList.remove('dragover');
+    });
+
+    uploadSection.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadSection.classList.remove('dragover');
+        if (e.dataTransfer.files[0]) showPreview(e.dataTransfer.files[0]);
+    });
+
+    function showPreview(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            document.getElementById('imagePreview').src = e.target.result;
+            document.getElementById('previewSection').style.display = 'block';
+            document.getElementById('uploadSection').style.display = 'none';
+            document.getElementById('resultSection').style.display = 'none';
+            document.getElementById('errorBox').style.display = 'none';
+        };
+        reader.readAsDataURL(file);
+    }
+
+    async function analyzeMRI() {
+        const file = fileInput.files[0];
+        if (!file) return;
+
+        document.getElementById('analyzeBtn').disabled = true;
+        document.getElementById('loading').style.display = 'block';
+        document.getElementById('resultSection').style.display = 'none';
+        document.getElementById('errorBox').style.display = 'none';
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await fetch('http://127.0.0.1:8000/analyze', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            document.getElementById('loading').style.display = 'none';
+
+            if (data.error) {
+                showError(data.error);
+                return;
+            }
+
+            // Show results
+            const badge = document.getElementById('tumorBadge');
+            badge.textContent = data.tumor_type;
+            badge.className = 'tumor-badge' + (data.tumor_type === 'notumor' ? ' notumor' : '');
+
+            const confidenceNum = parseFloat(data.confidence);
+            document.getElementById('confidenceText').textContent = `Confidence: ${data.confidence}`;
+            document.getElementById('confidenceFill').style.width = data.confidence;
+            document.getElementById('reportText').innerHTML = data.report
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\n/g, '<br>');
+            document.getElementById('resultSection').style.display = 'block';
+
+        } catch (err) {
+            document.getElementById('loading').style.display = 'none';
+            showError('Could not connect to the API. Make sure the backend is running.');
+        }
+
+        document.getElementById('analyzeBtn').disabled = false;
+    }
+
+    function showError(msg) {
+        const box = document.getElementById('errorBox');
+        box.textContent = msg;
+        box.style.display = 'block';
+    }
+
+    function resetForm() {
+        document.getElementById('fileInput').value = '';
+        document.getElementById('uploadSection').style.display = 'block';
+        document.getElementById('previewSection').style.display = 'none';
+        document.getElementById('resultSection').style.display = 'none';
+        document.getElementById('errorBox').style.display = 'none';
+    }
+</script>
+
+</body>
+</html>
